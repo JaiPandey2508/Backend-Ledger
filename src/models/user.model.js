@@ -10,9 +10,9 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       match: [
         /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-        "Invalid email address",
+        "Invalid Email address",
       ],
-      unique: [true, "Email already exists"],
+      unique: [true, "Email already exists."],
     },
     name: {
       type: String,
@@ -21,8 +21,14 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required for creating an account"],
-      minlength: [6, "Password must have at least 6 characters"],
-      select: false, //user query krte time password excluded rahega
+      minlength: [6, "password should contain more than 6 character"],
+      select: false,
+    },
+    systemUser: {
+      type: Boolean,
+      default: false,
+      immutable: true,
+      select: false,
     },
   },
   {
@@ -42,6 +48,8 @@ userSchema.pre("save", async function () {
 });
 
 userSchema.methods.comparePassword = async function (password) {
+  console.log(password, this.password);
+
   return await bcrypt.compare(password, this.password);
 };
 
