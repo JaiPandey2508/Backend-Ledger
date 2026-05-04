@@ -1,6 +1,12 @@
 const userModel = require("../models/user.model.js");
 const jwt = require("jsonwebtoken");
+const emailService = require("../services/email.service.js");
+const tokenBlackListModel = require("../models/blackList.model.js");
 
+/**
+ * - user register controller
+ * - POST /api/auth/register
+ */
 async function userRegisterController(req, res) {
   const { email, password, name } = req.body;
 
@@ -10,8 +16,8 @@ async function userRegisterController(req, res) {
 
   if (isExists) {
     return res.status(422).json({
-      message: "User already exists with this email",
-      status: "Failed",
+      message: "User already exists with email.",
+      status: "failed",
     });
   }
 
@@ -35,16 +41,23 @@ async function userRegisterController(req, res) {
     },
     token,
   });
+
+  await emailService.sendRegistrationEmail(user.email, user.name);
 }
+
+/**
+ * - User Login Controller
+ * - POST /api/auth/login
+ */
 
 async function userLoginController(req, res) {
   const { email, password } = req.body;
 
-  const user = await userModel.findOne({ email }).select("+password"); //ye select likh rhe hain because user model me password me select false hai, toh by default password nahi aayega, to uske liye explicitly select karna padega
+  const user = await userModel.findOne({ email }).select("+password");
 
   if (!user) {
     return res.status(401).json({
-      message: "Email or password is invalid",
+      message: "Email or password is INVALID",
     });
   }
 
@@ -52,7 +65,7 @@ async function userLoginController(req, res) {
 
   if (!isValidPassword) {
     return res.status(401).json({
-      message: "Invalid password",
+      message: "Email or password is INVALID",
     });
   }
 
@@ -72,7 +85,32 @@ async function userLoginController(req, res) {
   });
 }
 
+/**
+ * - User Logout Controller
+ * - POST /api/auth/logout
+ */
+async function userLogoutController(req, res) {
+  const token = req.cookies.token || req.headers.authorization?.split(" ")[1]; //APIs/mobile apps often use authorization header
+
+  if (!token) {
+    return res.status(200).json({
+      message: "User logged out successfully",
+    });
+  }
+
+  await tokenBlackListModel.create({
+    token: token,
+  });
+
+  res.clearCookie("token");
+
+  res.status(200).json({
+    message: "User logged out successfully",
+  });
+}
+
 module.exports = {
   userRegisterController,
   userLoginController,
+  userLogoutController,
 };
